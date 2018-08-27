@@ -1,0 +1,6 @@
+{
+  "API_URL":        "https://ccp.netcup.net/run/webservice/servers/endpoint.php?JSON",
+  "API_PASSWORD":   "0123456789",
+  "API_KEY":        "abcdefg",
+  "CUSTOMER_ID":    "13"
+}
