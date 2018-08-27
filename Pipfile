@@ -5,6 +5,7 @@ name = "pypi"
 
 [packages]
 requests = "*"
+tabulate = "*"
 
 [dev-packages]
 

@@ -6,6 +6,10 @@ import logging
 from .dns import DNSRecord, DNS
 
 
+class APIException(Exception):
+    pass
+
+
 class NcAPI:
     """
     Manage the netcup dns api via requests in a session.
@@ -80,9 +84,8 @@ class NcAPI:
 
         # check if successful
         if str.lower(response["status"]) != "success":
-            # TODO some custom exception
             self.__exit__()
-            raise Exception(response["longmessage"])
+            raise APIException(response["longmessage"])
 
         # return the actual information
         logging.debug(f"request returned success with response {response}")
