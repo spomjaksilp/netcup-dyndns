@@ -1,0 +1,22 @@
+{
+  "zone":
+  {
+    "domainname": "example.com"
+  },
+  "hosts":  [
+    {
+      "hostname":     "alice",
+      "type":         "A"
+    },
+    {
+      "hostname":     "bob",
+      "type":         "CNAME",
+      "destination":  "alice.example.com"
+    },
+    {
+      "hostname":     "charlie",
+      "type":         "CNAME",
+      "destination":  "alice.example.com"
+    }
+  ]
+}
