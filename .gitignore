@@ -102,3 +102,11 @@ venv.bak/
 
 # mypy
 .mypy_cache/
+
+
+# custom
+# do not upload settings
+settings.json
+hosts.json
+
+.idea/
