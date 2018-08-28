@@ -1,9 +1,9 @@
 """
 Specifies the dataclasses which are used.
-These are equivalent to the datatypes defined in netcups's api.
+These are equivalent to the datatypes defined in netcups's nc_api.
 Thy can be exported as a dictionary by using the dataclasses.asdict() method.
 On the other hand requests can take this dict and parse it to json.
-This let's you directly pass these instances to the api and make for a very transparent process.
+This let's you directly pass these instances to the nc_api and make for a very transparent process.
 """
 
 import dataclasses
@@ -12,7 +12,7 @@ from typing import List
 
 from tabulate import tabulate
 
-from dyndns.exceptions import *
+from .exceptions import *
 
 
 class JSONMixin:
@@ -32,7 +32,7 @@ class JSONMixin:
 class DNSRecord:
     """
     Dataclass for a single dns record.
-    This does not correspond to a api datatype and therefore does not inherit the mixin's json method.
+    This does not correspond to a nc_api datatype and therefore does not inherit the mixin's json method.
     """
     hostname: str
     destination: str
@@ -42,10 +42,34 @@ class DNSRecord:
     deleterecord: bool = False
     state: str = None
 
+    def needs_update(self, record) -> bool:
+        """
+        Checks if the records needs to be updated, currently only checks mandatory fields regarding dyndns.
+        :param record: DNSRecord to check against
+        :return: True if changed, False if not
+        """
+        return self.destination != record.destination or self.type != record.type
+
 
 @dataclass
 class DNSRecordSet(JSONMixin):
+    """
+    Basically a list of DNSRecord instances, but this maps to the datatype used by netcup.
+    Also contains some helper methods.
+    """
     dnsrecords: List[DNSRecord]
+
+    def __contains__(self, hostname: str) -> bool:
+        """
+        Providing dunder method to check if a record woth the given hostname exists in the set.
+        :param hostname: the hostname as string
+        :return: True if present, False if not
+        """
+        try:
+            self.get_by_hostname(hostname=hostname)
+            return True
+        except RecordUnknown:
+            return False
 
     def table(self) -> str:
         """
@@ -65,6 +89,17 @@ class DNSRecordSet(JSONMixin):
             if r.hostname == hostname:
                 return r
         raise RecordUnknown(f"there is nor record with hostname {hostname}")
+
+    def add(self, record: DNSRecord):
+        """
+        Modifies the recordset.
+        If an entry with matching hostname if present, modify it.
+        If no entry is present, create a new one.
+        :param record: a new valid dns record
+        :return: None
+        """
+        self.dnsrecords.append(record)
+
 
 
 @dataclass

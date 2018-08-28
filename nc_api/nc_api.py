@@ -6,13 +6,13 @@ import logging
 
 from requests import Session
 
-from dyndns.exceptions import *
+from .exceptions import *
 from .dns import DNSRecord, DNSZone, DNSRecordSet
 
 
 class NcAPI:
     """
-    Manage the netcup dns api via requests in a session.
+    Manage the netcup dns nc_api via requests in a session.
     """
 
     def __init__(self, api_url: str, api_password: str, api_key: str, customer_id: str):
@@ -36,13 +36,13 @@ class NcAPI:
 
     def nc_request(self, action: str=None, parameters: dict={}) -> dict:
         """
-        Construct a valid api request according to https://ccp.netcup.net/run/webservice/servers/endpoint.php.
+        Construct a valid nc_api request according to https://ccp.netcup.net/run/webservice/servers/endpoint.php.
         :param action: action name
         :param parameters: additional parameters
         :return: payload dictionary
         """
         assert action is not None, "action has to be provided!"
-        # attach api session id bc it is a default parameter
+        # attach nc_api session id bc it is a default parameter
         if action != "login":
             parameters = {"apisessionid":   self._session_id,
                           **parameters,
@@ -70,7 +70,7 @@ class NcAPI:
 
     def _send(self, payload: dict) -> dict:
         """
-        Post api request and raise if an error occured.
+        Post nc_api request and raise if an error occured.
         :param payload: dictionary of json payload
         :return: request reponse
         """
@@ -93,7 +93,7 @@ class NcAPI:
 
     def _login(self):
         """
-        Login to access api.
+        Login to access nc_api.
         :return:
         """
         data = self._send(self.nc_request(action="login", parameters={"apipassword": self._api_password}))
@@ -115,7 +115,7 @@ class NcAPI:
         """
         Returns information in the dns zone of given domain.
         :param domainname: domain name like netcup.de
-        :return: dictionary
+        :return: DNSZone
         """
         response = self._send(self.nc_request(action="infoDnsZone", parameters={"domainname": domainname}))
 
@@ -134,7 +134,7 @@ class NcAPI:
         """
         Returns information in the dns records (aka host entries) of given domain.
         :param domainname: domain name like netcup.de
-        :return: dictionary
+        :return: DNSRecordSet
         """
         response = self._send(self.nc_request(action="infoDnsRecords", parameters={"domainname": domainname}))
 
