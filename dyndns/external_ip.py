@@ -2,16 +2,17 @@
 Helper to get the external ip.
 """
 
-from requests import get
 from ipaddress import IPv4Address
 import logging
+
+from requests import get
+
 
 class ExternalIP:
     """
     Base class.
     Do not use this directly, instead inherit and implement!
     """
-
     def __init__(self):
         pass
 
@@ -28,7 +29,6 @@ class ExternalIpify:
     """
     This implementation uses the https://www.ipify.org/ API.
     """
-
     API_URL = "https://api.ipify.org"
 
     @property

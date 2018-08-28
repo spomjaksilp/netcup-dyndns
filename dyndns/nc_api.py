@@ -1,13 +1,13 @@
-"Netcup API implementation"
+"""
+Netcup API implementation.
+"""
 
-from requests import Session
 import logging
 
-from .dns import DNSRecord, DNS
+from requests import Session
 
-
-class APIException(Exception):
-    pass
+from dyndns.exceptions import *
+from .dns import DNSRecord, DNSZone, DNSRecordSet
 
 
 class NcAPI:
@@ -111,35 +111,36 @@ class NcAPI:
         logging.info(f"logged out successfully")
         self._session_id = None
 
-    def infoDnsZone(self, domainname: str):
+    def infoDnsZone(self, domainname: str) -> DNSZone:
         """
         Returns information in the dns zone of given domain.
         :param domainname: domain name like netcup.de
         :return: dictionary
         """
-        return self._send(self.nc_request(action="infoDnsZone", parameters={"domainname": domainname}))
+        response = self._send(self.nc_request(action="infoDnsZone", parameters={"domainname": domainname}))
 
-    def infoDnsRecords(self, domainname: str):
+        # build zone
+        zone = DNSZone(name=domainname,
+                       ttl=int(response["ttl"]),
+                       serial=response["serial"],
+                       refresh=int(response["refresh"]),
+                       retry=int(response["retry"]),
+                       expire=int(response["expire"]),
+                       dnssecstatus=response["dnssecstatus"])
+
+        return zone
+
+    def infoDnsRecords(self, domainname: str) -> DNSRecordSet:
         """
         Returns information in the dns records (aka host entries) of given domain.
         :param domainname: domain name like netcup.de
         :return: dictionary
         """
-        return self._send(self.nc_request(action="infoDnsRecords", parameters={"domainname": domainname}))
-
-    def get_info(self, domainname: str) -> DNS:
-        """
-        Return information on zone and records regarding a single domain.
-        :param domainname:
-        :return: custom dataclass (see dns.py for)
-        """
-        # first get zone and record information
-        zone = self.infoDnsZone(domainname)
-        records = self.infoDnsRecords(domainname)
+        response = self._send(self.nc_request(action="infoDnsRecords", parameters={"domainname": domainname}))
 
         # build records
-        records_parsed = []
-        for r in records["dnsrecords"]:
+        rset = DNSRecordSet(dnsrecords=[])
+        for r in response["dnsrecords"]:
             dr = DNSRecord(id=int(r["id"]),
                            hostname=r["hostname"],
                            type=r["type"],
@@ -148,16 +149,25 @@ class NcAPI:
                            deleterecord=r["deleterecord"],
                            state=r["state"])
 
-            records_parsed.append(dr)
+            rset.dnsrecords.append(dr)
 
-        # build dataclass
-        dns = DNS(name=domainname,
-                  ttl=int(zone["ttl"]),
-                  serial=zone["serial"],
-                  refresh=int(zone["refresh"]),
-                  retry=int(zone["retry"]),
-                  expire=int(zone["expire"]),
-                  dnssecstatus=zone["dnssecstatus"],
-                  records=records_parsed)
+        return rset
 
-        return dns
+    def updateDnsZone(self, zone: DNSZone):
+        """
+        Update/change the given dns zone.
+        :param zone: dns zone dataclass
+        :return:
+        """
+        self._send(self.nc_request(action="updateDnsZone",
+                                   parameters={"domainname": zone.name, "dnszone": zone.json()}))
+
+    def updateDnsRecords(self, zone: DNSZone, recordset: DNSRecordSet):
+        """
+        Update/change a given set of dns records.
+        :param zone: the according dns zone has to be given to update the right domain
+        :param recordset: dns record set
+        :return:
+        """
+        self._send(self.nc_request(action="updateDnsRecords",
+                                   parameters={"domainname": zone.name, "dnsrecordset": recordset.json()}))
