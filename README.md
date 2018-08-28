@@ -110,9 +110,9 @@ with NcAPI(api_url=settings["API_URL"],
            api_password=settings["API_PASSWORD"],
            customer_id=settings["CUSTOMER_ID"]) as api:
 
-    zone = api.infoDnsZone(domainname="laz0r.de")
+    zone = api.infoDnsZone(domainname="example.com")
     print(zone.table())
 
-    recordset = api.infoDnsRecords(domainname="laz0r.de")
+    recordset = api.infoDnsRecords(domainname="example.com")
     print(recordset.table())
 ```
