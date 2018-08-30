@@ -1,0 +1,6 @@
+[Unit]
+Description=update dydns via docker
+
+[Service]
+Type=oneshot
+ExecStart=/usr/bin/docker run dyndns-update
