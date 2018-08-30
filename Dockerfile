@@ -7,8 +7,6 @@ COPY hosts.json /
 COPY Pipfile /
 COPY Pipfile.lock /
 
-RUN ls -la
-
 RUN pip install pipenv
 RUN pipenv install
 
