@@ -3,4 +3,4 @@ Description=update dydns via docker
 
 [Service]
 Type=oneshot
-ExecStart=/usr/bin/docker run dyndns-update
+ExecStart=/usr/bin/docker run --rm dyndns-update
