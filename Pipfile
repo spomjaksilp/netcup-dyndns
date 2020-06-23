@@ -6,12 +6,12 @@ name = "pypi"
 [packages]
 requests = "*"
 tabulate = "*"
-click = "*"
+click = "<7"
 
 [dev-packages]
 
 [requires]
-python_version = "3.7"
+python_version = "3.8"
 
 [scripts]
 dyndns = "python dyndns.py"
