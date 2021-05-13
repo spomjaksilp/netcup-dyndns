@@ -80,8 +80,8 @@ def modify_recordset(old_set: DNSRecordSet, new_set: DNSRecordSet) -> (DNSRecord
 
 
 @click.command()
-@click.argument("conf", "-c", type=click.Path(exists=True))
-@click.argument("hosts", "-h", type=click.Path(exists=True))
+@click.argument("conf", type=click.Path(exists=True))
+@click.argument("hosts", type=click.Path(exists=True))
 @click.option("--update", "-u", help="update settings, defaults to False.", is_flag=True)
 @click.option("--verbose", "-v", help="debugging output.", is_flag=True)
 @click.option("--ttl", "-t", type=int, help="change zone ttl to integer, defaults to not change ttl.", default=None)
