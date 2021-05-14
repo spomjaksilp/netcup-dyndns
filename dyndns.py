@@ -18,7 +18,7 @@ from ipaddress import IPv4Address
 import click
 
 from nc_api import NcAPI, DNSRecord, DNSRecordSet
-from nc_api.utils.external_ip import ExternalIpify
+from nc_api.utils.external_ip import ExternalIpify, ExternalFritzbox
 
 
 def import_hosts(filename: str, ip: IPv4Address) -> DNSRecordSet:
@@ -111,7 +111,16 @@ def dyndns(conf, hosts, update: bool=False, ttl: int=None, verbose: bool=False):
     logging.debug(f"settings from file:\t{settings}")
 
     # get external ip
-    ip = ExternalIpify().ip
+    fritzbox_ip = settings.get("FRITZBOX_IP")
+    if fritzbox_ip is not None:
+        logging.debug(f"getting external ip via FRITZ!Box API on {fritzbox_ip}")
+        ip = ExternalFritzbox(fritzbox_ip).ip
+    else:
+        logging.debug(f"getting external ip via ipify API")
+        ip = ExternalIpify().ip
+    if ip is None:
+        logging.error(f"unable to find external ip")
+        return
     print(f"found external ip:\t{ip}")
 
     # import domain name from file

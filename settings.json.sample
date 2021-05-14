@@ -2,5 +2,6 @@
   "API_URL":        "https://ccp.netcup.net/run/webservice/servers/endpoint.php?JSON",
   "API_PASSWORD":   "0123456789",
   "API_KEY":        "abcdefg",
-  "CUSTOMER_ID":    "13"
+  "CUSTOMER_ID":    "13",
+  "FRITZBOX_IP":    "192.168.178.1"
 }
