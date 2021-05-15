@@ -46,7 +46,7 @@ Options:
 ```
  
 ## API settings
- This `json` file configures the api credentials.
+ This `settings.json` file configures the api credentials.
  ```json
 {
   "API_URL":        "https://ccp.netcup.net/run/webservice/servers/endpoint.php?JSON",
@@ -56,8 +56,13 @@ Options:
 }
 ```
 
+If you would like to use your [FRITZ!Box](https://en.wikipedia.org/wiki/Fritz!Box) for getting your external ip, you need to add its ip address in this `json` file:
+ ```
+  "FRITZBOX_IP":    "192.168.178.1"
+```
+
 ## Host records
-Specifies the hosts to be updates.
+This `hosts.json` file specifies the hosts to be updated.
 
 If no `destination` is specified, the found external ip will be used.
 ```json
@@ -88,11 +93,18 @@ If no `destination` is specified, the found external ip will be used.
 ## API usage examples
  If you want to use api, please take a look at the source files.
  
- Getting the external IP with www.ipify.org API:
+Getting the external IP with www.ipify.org API (default):
  ```python
 from nc_api.utils.external_ip import ExternalIpify
 
 print(ExternalIpify().ip)
+```
+
+Getting the external IP with [FRITZ!Box API](https://github.com/kbr/fritzconnection) (alternative, if you own one):
+ ```python
+from nc_api.utils.external_ip import ExternalFritzbox
+
+print(ExternalFritzbox("192.168.178.1").ip)
 ```
 
 Retrieving dns zone info and dns records:
