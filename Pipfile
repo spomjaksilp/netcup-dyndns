@@ -6,7 +6,8 @@ name = "pypi"
 [packages]
 requests = "*"
 tabulate = "*"
-click = "<7"
+click = "*"
+fritzconnection = ">=1.0"
 
 [dev-packages]
 
