@@ -1,5 +1,5 @@
 # tiny alpine python image
-FROM  python:3.8-alpine
+FROM  python:3.9-alpine
 
 # install pipenv
 RUN pip install pipenv
