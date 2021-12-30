@@ -21,17 +21,13 @@ from nc_api import NcAPI, DNSRecord, DNSRecordSet
 from nc_api.utils.external_ip import ExternalIpify, ExternalFritzbox
 
 
-def import_hosts(filename: str, ip: IPv4Address) -> DNSRecordSet:
+def import_hosts(hosts: list, ip: IPv4Address) -> DNSRecordSet:
     """
     Imports a list of hosts from the given file.
-    :param filename: where the hosts file is located
+    :param hosts: array of the records which need to be updated
     :param ip: IPv4Address instance containing target ip (for dyndns)
     :return: DNSRecordSet
     """
-    # read file ('host' section contains a list)
-    with open(filename) as fp:
-        hosts = json.load(fp)["hosts"]
-
     records = DNSRecordSet(dnsrecords=[])
     # construct records from hosts
     for h in hosts:
@@ -42,19 +38,6 @@ def import_hosts(filename: str, ip: IPv4Address) -> DNSRecordSet:
                               destination=destination))
 
     return records
-
-
-def import_zone(filename: str) -> str:
-    """
-    Imports the zone information from hosts file
-    :param filename: where the hosts file is located
-    :return: domain name
-    """
-    # read file ('host' section contains a list)
-    with open(filename) as fp:
-        zone = json.load(fp)["zone"]
-
-    return zone["domainname"]
 
 
 def modify_recordset(old_set: DNSRecordSet, new_set: DNSRecordSet) -> (DNSRecordSet, bool):
@@ -123,52 +106,58 @@ def dyndns(conf, hosts, update: bool=False, ttl: int=None, verbose: bool=False):
         return
     print(f"found external ip:\t{ip}")
 
-    # import domain name from file
-    domainname = import_zone(filename=hosts)
-    print(f"working on domain:\t{domainname}")
-
-    # import hosts from file
-    new_set = import_hosts(filename=hosts, ip=ip)
-
+    # read domains from file
+    with open(hosts) as fp:
+        domains = json.load(fp)
+    logging.debug(f"domains from file:\t{domains}")
+    
     # api related part
     with NcAPI(api_url=settings["API_URL"],
                api_key=settings["API_KEY"],
                api_password=settings["API_PASSWORD"],
                customer_id=settings["CUSTOMER_ID"]) as api:
-        # read current dns zone
-        zone = api.infoDnsZone(domainname=domainname)
-        print(zone.table())
 
-        # read current host records
-        old_set = api.infoDnsRecords(domainname=domainname)
-        print(old_set.table())
+        # iterate over all domains
+        for domainname, settings in domains.get("zones").items():
+            print(f"working on domain:\t{domainname}")
 
-        # modify set
-        updated_set, changed = modify_recordset(old_set=old_set, new_set=new_set)
-        print("\nupdated set:")
-        print(updated_set.table())
+            # read current dns zone
+            zone = api.infoDnsZone(domainname=domainname)
+            print(zone.table())
 
-        if ttl is not None:
-            print("updating ttl ...")
-            if zone.ttl == ttl:
-                print("ttl has not changed, leaving it alone!")
-            else:
-                zone.ttl = ttl
-                api.updateDnsZone(zone=zone)
+            # read current host records
+            old_set = api.infoDnsRecords(domainname=domainname)
+            print(old_set.table())
 
-                # read zone again
-                print(api.infoDnsZone(domainname=domainname).table())
+            # read the new hosts set for this domain
+            new_set = import_hosts(hosts=settings.get("hosts"), ip=ip)
 
-        if update:
-            print("\n updating records ...")
-            if changed:
-                api.updateDnsRecords(zone=zone, recordset=updated_set)
+            # modify set
+            updated_set, changed = modify_recordset(old_set=old_set, new_set=new_set)
+            print("\nupdated set:")
+            print(updated_set.table())
 
-                # read current host records
-                print(api.infoDnsRecords(domainname=domainname).table())
-            else:
-                print("records did not change, leaving it alone!")
+            # update ttl
+            changed_ttl = "ttl" in settings and settings.get("ttl") != zone.ttl
+            if changed_ttl:
+                zone.ttl = settings.get("ttl")
+                print(f"updated ttl: {zone.ttl}")
 
+            if update:
+                print("\n update settings ...")
+                if changed_ttl or changed: 
+                    if changed_ttl:
+                        api.updateDnsZone(zone=zone)
+    
+                        #read zone again
+                        print(api.infoDnsZone(domainname=domainname).table())
+                    if changed:
+                        api.updateDnsRecords(zone=zone, recordset=updated_set)
+    
+                        # read current host records
+                        print(api.infoDnsRecords(domainname=domainname).table())
+                else:
+                    print("records did not change, leaving it alone!")
 
 if __name__ == "__main__":
     dyndns()

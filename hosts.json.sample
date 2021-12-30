@@ -1,22 +1,35 @@
 {
-  "zone":
-  {
-    "domainname": "example.com"
-  },
-  "hosts":  [
-    {
-      "hostname":     "alice",
-      "type":         "A"
+  "zones": {
+    "example.com": {
+      "ttl": 300,
+      "hosts": [
+        {
+          "hostname": "alice",
+          "type": "A"
+        },
+        {
+          "hostname": "bob",
+          "type": "CNAME",
+          "destination": "alice.example.com"
+        },
+        {
+          "hostname": "charlie",
+          "type": "CNAME",
+          "destination": "alice.example.com"
+        }
+      ]
     },
-    {
-      "hostname":     "bob",
-      "type":         "CNAME",
-      "destination":  "alice.example.com"
-    },
-    {
-      "hostname":     "charlie",
-      "type":         "CNAME",
-      "destination":  "alice.example.com"
+    "anotherdomain.de": {
+      "hosts": [
+        {
+          "hostname": "*",
+          "type": "A"
+        },
+        {
+          "hostname": "@",
+          "type": "A"
+        }
+      ]
     }
-  ]
+  }
 }
