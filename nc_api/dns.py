@@ -8,7 +8,7 @@ This let's you directly pass these instances to the nc_api and make for a very t
 
 import dataclasses
 from dataclasses import dataclass
-from typing import List
+from typing import List, Union
 
 from tabulate import tabulate
 
@@ -50,6 +50,26 @@ class DNSRecord:
         """
         return self.destination != record.destination or self.type != record.type
 
+    def update(self, record) -> bool:
+        """
+        Update this record with the given one.
+
+        :param record: The record which values should be taken.
+        :return: True if something was changed, False if not
+        """
+        modified = []
+
+        def check_and_write(attr):
+            if getattr(self, attr) == getattr(record, attr):
+                return
+            setattr(self, attr, getattr(record, attr))
+            modified.append(None)
+
+        check_and_write("destination")
+        check_and_write("type")
+
+        return bool(modified)
+
 
 @dataclass
 class DNSRecordSet(JSONMixin):
@@ -61,15 +81,14 @@ class DNSRecordSet(JSONMixin):
 
     def __contains__(self, hostname: str) -> bool:
         """
-        Providing dunder method to check if a record woth the given hostname exists in the set.
+        Providing dunder method to check if a record with the given hostname exists in the set.
         :param hostname: the hostname as string
         :return: True if present, False if not
         """
-        try:
-            self.get_by_hostname(hostname=hostname)
-            return True
-        except RecordUnknown:
-            return False
+        return bool(self.get_by_hostname(hostname=hostname))
+
+    def __iter__(self):
+        return iter(self.dnsrecords)
 
     def table(self) -> str:
         """
@@ -81,25 +100,47 @@ class DNSRecordSet(JSONMixin):
 
     def get_by_hostname(self, hostname):
         """
-        Return the record with given hostname.
+        Return the records with given hostname.
         :param hostname: a string
-        :return: a DNSRecord
+        :return: a (possibly empty) list of DNSRecords
         """
-        for r in self.dnsrecords:
-            if r.hostname == hostname:
-                return r
-        raise RecordUnknown(f"there is nor record with hostname {hostname}")
+        return [r for r in self.dnsrecords if r.hostname == hostname]
 
-    def add(self, record: DNSRecord):
+    def add(self, record: DNSRecord) -> bool:
         """
         Modifies the recordset.
         If an entry with matching hostname if present, modify it.
         If no entry is present, create a new one.
+        If the entry is already present as it, skip it.
         :param record: a new valid dns record
-        :return: None
+        :return: True, if something was changed. False, otherwise.
         """
-        self.dnsrecords.append(record)
-
+        # record with this hostname exists
+        same_hosts = self.get_by_hostname(record.hostname)
+        if same_hosts:
+            # only A and AAAA can be added in parallel.
+            if len(same_hosts) == 2:
+                # A and AAAA are present
+                if record.type not in ["A", "AAAA"]:
+                    same_hosts[0].update(record)
+                    self.dnsrecords.delete(same_hosts[1])
+                    return True
+                else:
+                    old_record = next(filter(lambda x: x.type == record.type,
+                                             same_hosts))
+                    return old_record.update(record)
+            elif ((record.type == "A" and same_hosts[0].type == "AAAA") or
+                  (record.type == "AAAA" and same_hosts[0].type == "A")):
+                self.dnsrecords.append(record)
+                return True
+            else:
+                # an arbitrary entry that does not fit to the current one
+                return same_hosts[0].update(record)
+        else:
+            # not present, just append
+            self.dnsrecords.append(record)
+            return True
+        return False
 
 
 @dataclass

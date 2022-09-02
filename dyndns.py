@@ -59,21 +59,8 @@ def import_zone(filename: str) -> str:
 
 def modify_recordset(old_set: DNSRecordSet, new_set: DNSRecordSet) -> (DNSRecordSet, bool):
     changed = False
-    for new_record in new_set.dnsrecords:
-        # record with this hostname exists
-        if new_record.hostname in old_set:
-            # get record and update it
-            old_record = old_set.get_by_hostname(new_record.hostname)
-            # check if update needed
-            if old_record.needs_update(record=new_record):
-                changed = True
-                old_record.destination = new_record.destination
-                old_record.type = new_record.type
-
-        # does not exist, create it
-        else:
-            changed = True
-            old_set.add(new_record)
+    for new_record in new_set:
+        changed |= old_set.add(new_record)
 
     # finally return the modified set
     return old_set, changed
