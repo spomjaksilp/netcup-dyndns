@@ -1,0 +1,13 @@
+{
+  "domainname": "example.com",
+  "hosts":  [
+    {
+      "hostname": "alice",
+      "key":      "3is83sen"
+    },
+    {
+      "hostname": "bob",
+      "key":      "s8dfwske"
+    }
+  ]
+}

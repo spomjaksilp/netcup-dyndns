@@ -44,6 +44,29 @@ Options:
   --help             Show this message and exit.
 
 ```
+
+## Server usage
+You can also use this repository as a DynDNS server (based on Flask) on a trusted host.
+With that, you can call an URL with predefined parameters and the server will update the DNS settings.
+
+The service accepts URLs in the form:
+```
+http://myhost.com/<key>?ipv4=<ipv4>&ipv6=<ipv6>
+```
+
+### Deployment
+
+1. Provide a `settings.json` as described in the next section.
+   The server recognizes the environment variable `DYNDNS_SETTINGS` as file path (default is `settings.json`).
+2. Provide a `subdomains.json` as described further down.
+3. Connect the Flask app to your webserver. For example, this is possible with [gunicorn](https://gunicorn.org/) and systemd.
+   For that, adjust the paths in `dnydns-server.service`, copy it in `/etc/systemd/system/`, and start it.
+   Adjust also your webserver. For example, with nginx, add these lines:
+```
+location /dyndns/ {
+	proxy_pass http://localhost:40404/;
+}
+```
  
 ## API settings
  This `settings.json` file configures the api credentials.
@@ -59,6 +82,17 @@ Options:
 If you would like to use your [FRITZ!Box](https://en.wikipedia.org/wiki/Fritz!Box) for getting your external ip, you need to add its ip address in this `json` file:
  ```
   "FRITZBOX_IP":    "192.168.178.1"
+```
+
+If you will run the service as a server, you need to provide a few additional entries:
+
+ * The file path to the `subdomains.json` file (relative to `settings.json`)
+```
+  "SUBDOMAINS": "subdomains.json"
+```
+ * A log level (optional)
+```
+  "LOG_LEVEL": "DEBUG"
 ```
 
 ## Host records
@@ -88,6 +122,28 @@ If no `destination` is specified, the found external ip will be used.
     }
   ]
 }
+```
+
+## Subdomains
+When run in server mode, an additional file specifies a mapping between the key and the hostname:
+```json
+{
+  "domainname": "example.com",
+  "hosts":  [
+    {
+      "hostname": "alice",
+      "key":      "3is83sen"
+    },
+    {
+      "hostname": "bob",
+      "key":      "s8dfwske"
+    }
+  ]
+}
+```
+With that file the domain `alice.example.com` can be updated by calling the URL:
+```
+http://myhost.com/3is83sen?ipv4=10.10.10.10
 ```
 
 ## API usage examples
