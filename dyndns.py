@@ -14,11 +14,11 @@ This script will not check the sanity of your entries!
 import json
 import logging
 from ipaddress import IPv4Address
+from typing import Dict, Any
 
 import click
 
 from nc_api import NcAPI, DNSRecord, DNSRecordSet
-from nc_api.utils.external_ip import ExternalIpify, ExternalFritzbox
 
 
 def import_hosts(filename: str, ip: IPv4Address) -> DNSRecordSet:
@@ -59,24 +59,60 @@ def import_zone(filename: str) -> str:
 
 def modify_recordset(old_set: DNSRecordSet, new_set: DNSRecordSet) -> (DNSRecordSet, bool):
     changed = False
-    for new_record in new_set.dnsrecords:
-        # record with this hostname exists
-        if new_record.hostname in old_set:
-            # get record and update it
-            old_record = old_set.get_by_hostname(new_record.hostname)
-            # check if update needed
-            if old_record.needs_update(record=new_record):
-                changed = True
-                old_record.destination = new_record.destination
-                old_record.type = new_record.type
-
-        # does not exist, create it
-        else:
-            changed = True
-            old_set.add(new_record)
+    for new_record in new_set:
+        changed |= old_set.add(new_record)
 
     # finally return the modified set
     return old_set, changed
+
+
+def update_dyndns(settings: Dict[str, Any], domainname: str, new_records: DNSRecordSet, update: bool = True, ttl:int = None):
+    """Set the domain according to the given parameters.
+
+    :param settings: API settings (see settings.json.sample)
+    :param domainname: the domain which subdomains should be changed
+    :param new_records: a new set of records which should be submitted
+    :param update: do the actual update (otherwise it is a dry run)
+    :param ttl: if specified, also modify the TTL
+    """
+    # api related part
+    with NcAPI(api_url=settings["API_URL"],
+               api_key=settings["API_KEY"],
+               api_password=settings["API_PASSWORD"],
+               customer_id=settings["CUSTOMER_ID"]) as api:
+        # read current dns zone
+        zone = api.infoDnsZone(domainname=domainname)
+        logging.debug("Zone Table: %s", zone.table())
+
+        # read current host records
+        old_set = api.infoDnsRecords(domainname=domainname)
+        logging.debug("Old Records: %s", old_set.table())
+
+        # modify set
+        updated_set, changed = modify_recordset(old_set=old_set,
+                                                new_set=new_records)
+        logging.info("Updated set: %s", updated_set.table())
+
+        if ttl is not None:
+            logging.info("Updating ttl ...")
+            if zone.ttl == ttl:
+                logging.info("ttl has not changed, leaving it alone!")
+            else:
+                zone.ttl = ttl
+                api.updateDnsZone(zone=zone)
+
+                # read zone again
+                logging.debug("\n%s", api.infoDnsZone(domainname=domainname).table())
+
+        if update:
+            logging.info("updating records ...")
+            if changed:
+                api.updateDnsRecords(zone=zone, recordset=updated_set)
+
+                # read current host records
+                logging.debug("\n%s", api.infoDnsRecords(domainname=domainname).table())
+            else:
+                logging.info("records did not change, leaving it alone!")
 
 
 @click.command()
@@ -97,6 +133,9 @@ def dyndns(conf, hosts, update: bool=False, ttl: int=None, verbose: bool=False):
     Please review your config in hosts.json, this script will NOT check the sanity of your dns entries.
     !!!
     """
+    # function level import to avoid dependencies when used in server mode
+    from nc_api.utils.external_ip import ExternalIpify, ExternalFritzbox
+
     if verbose:
         logging.basicConfig(level=logging.DEBUG)
 
@@ -130,44 +169,8 @@ def dyndns(conf, hosts, update: bool=False, ttl: int=None, verbose: bool=False):
     # import hosts from file
     new_set = import_hosts(filename=hosts, ip=ip)
 
-    # api related part
-    with NcAPI(api_url=settings["API_URL"],
-               api_key=settings["API_KEY"],
-               api_password=settings["API_PASSWORD"],
-               customer_id=settings["CUSTOMER_ID"]) as api:
-        # read current dns zone
-        zone = api.infoDnsZone(domainname=domainname)
-        print(zone.table())
-
-        # read current host records
-        old_set = api.infoDnsRecords(domainname=domainname)
-        print(old_set.table())
-
-        # modify set
-        updated_set, changed = modify_recordset(old_set=old_set, new_set=new_set)
-        print("\nupdated set:")
-        print(updated_set.table())
-
-        if ttl is not None:
-            print("updating ttl ...")
-            if zone.ttl == ttl:
-                print("ttl has not changed, leaving it alone!")
-            else:
-                zone.ttl = ttl
-                api.updateDnsZone(zone=zone)
-
-                # read zone again
-                print(api.infoDnsZone(domainname=domainname).table())
-
-        if update:
-            print("\n updating records ...")
-            if changed:
-                api.updateDnsRecords(zone=zone, recordset=updated_set)
-
-                # read current host records
-                print(api.infoDnsRecords(domainname=domainname).table())
-            else:
-                print("records did not change, leaving it alone!")
+    # do the actual change
+    update_dyndns(settings, domainname, new_set, update=update, ttl=ttl)
 
 
 if __name__ == "__main__":

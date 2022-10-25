@@ -1,0 +1,18 @@
+[Unit]
+Description = DynDNS server gunicorn
+After = network.target
+
+[Service]
+PIDFile=/run/dyndns/pid
+RuntimeDirectory=dyndns
+PermissionsStartOnly = true
+User = dyndns
+Group = dyndns
+WorkingDirectory = /opt/netcup-dyndns/
+ExecStart = gunicorn 'server:app' --pid /run/dyndns/pid --bind '127.0.0.1:40404' --workers 1 --access-logfile - --log-file -
+ExecReload=/bin/kill -s HUP $MAINPID
+ExecStop=/bin/kill -s TERM $MAINPID
+PrivateTmp = true
+
+[Install]
+WantedBy = multi-user.target

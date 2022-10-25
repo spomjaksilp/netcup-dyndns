@@ -108,5 +108,6 @@ venv.bak/
 # do not upload settings
 settings.json
 hosts.json
+subdomains.json
 
 .idea/
